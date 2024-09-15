@@ -148,16 +148,13 @@ launcher looks for files to display such as the default interface.
 - If USE_OPENAL is checked, OPENAL_INCLUDE_DIR will appear. Set it to the include
 folder in the OpenAL SDK folder.
 
-Building - Linux (has been tested on Ubuntu)
+Building - Linux (has been tested on Debian Jessie)
 =========================
 Command line
 -----------
+- sudo apt-get install build-essential libopenal-dev libwxgtk3.0-dev
+libwxgtk3.0-0-dbg python-markdown git cmake libsdl2-dbg libsdl2-dev
 - Download the wxLauncher source
-- sudo apt-get install build-essential libopenal-dev libwxgtk2.8-dev
-libwxgtk2.8-dbg python-markdown
-- Download and install the cmake 2.8 .debs for your platform from:
-<https://launchpad.net/ubuntu/+source/cmake>.  You will need cmake-data, and
-cmake-2.8.0* for your platform, plus cmake-curses-gui or cmake-qt-gui
 - cd <source directory>
 - mkdir build
 - cd build
@@ -172,7 +169,7 @@ Or instead type:
 
 CMake selects the wrong python
 ------------------------------
-If CMake selects the wrong version of python (should be version 2), you
+If CMake selects the wrong version of python, you
 can set the version yourself by setting PYTHON_EXECUTABLE when you run CMake by
 adding "-DPYTHON_EXECUTABLE=</path/to/python2>" to your command line, for
 example "-DPYTHON_EXECUTABLE=/usr/bin/python2".

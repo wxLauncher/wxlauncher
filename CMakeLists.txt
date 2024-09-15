@@ -11,25 +11,45 @@ endif()
 # We don't use C but CMake on linux complains if we don't have it enabled
 project(wxlauncher CXX C) 
 
-# Special source directorys
-set(LAUNCHER_CMAKE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/cmake)
-list(INSERT CMAKE_MODULE_PATH 0 "${LAUNCHER_CMAKE_SOURCE_DIR}/include")
-set(3RD_PARTY_SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rdparty)
-
 find_program(GIT_EXECUTABLE git)
+if(NOT GIT_EXECUTABLE)
+	message(FATAL_ERROR "Unable to locate 'git' commandline tool. "
+		"Please:\n"
+		" - Install commandline git\n"
+		" - Make sure that commandline git is on your path\n"
+		" - Call cmake with -DGIT_EXECUTABLE=<full path to git>")
+endif()
 
-include(${3RD_PARTY_SOURCE_DIR}/GetVersionFromGitTag.cmake)
+include(cmake/wxl_platforms.cmake)
+# Special source directories
+set(LAUNCHER_CMAKE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/cmake)
+include(${LAUNCHER_CMAKE_SOURCE_DIR}/setup_submodules.cmake)
+include(${LAUNCHER_CMAKE_SOURCE_DIR}/modules/modules.cmake)
+list(INSERT CMAKE_MODULE_PATH 0 "${LAUNCHER_CMAKE_SOURCE_DIR}/include")
+set(3RD_PARTY_SOURCE_DIR ${CMAKE_SOURCE_DIR}/vendor)
+
+include(${LAUNCHER_CMAKE_SOURCE_DIR}/GetVersionFromGitTag.cmake)
 
 message("--- Configuring wxLauncher ${wxlauncher_VERSION_STRING_FULL}")
 
-if(NOT(DEFINED IS_WIN32 OR DEFINED IS_LINUX OR DEFINED IS_APPLE))
-  if(WIN32)
-    set(IS_WIN32 TRUE)
-  elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(IS_APPLE TRUE)
-  else()
-    set(IS_LINUX TRUE)
-  endif()
+option(USE_3RDPARTY "Use the libraries in the 3rd party directory"
+	${USE_3RDPARTY_DEFAULT})
+if(USE_3RDPARTY)
+	message("--- Using 3rd party source directory")
+	execute_process(COMMAND ${CMAKE_COMMAND}
+		-P ${3RD_PARTY_SOURCE_DIR}/build_deps.cmake
+		WORKING_DIRECTORY ${3RD_PARTY_SOURCE_DIR}
+		RESULT_VARIABLE USE_3RDPARTY_BUILD
+		)
+	if(USE_3RDPARTY_BUILD)
+		message(FATAL_ERROR "3rd party lib build failed: ${USE_3RDPARTY_BUILD}")
+	endif()
+	include(${3RD_PARTY_SOURCE_DIR}/dirs.cmake)
+	set(ENV{wxWidgets_ROOT_DIR} ${3RD_PARTY_WXWIDGETS})
+	set(ENV{SDL2DIR} ${3RD_PARTY_SDL2})
+	set(ENV{OPENALDIR} ${3RD_PARTY_OPENAL})
+else()
+	message("--- NOT using 3rd party source directory")
 endif()
 
 if(DEFINED WXVER AND NOT WXVER MATCHES "PLATFORM")
@@ -144,46 +164,15 @@ if(USE_OPENAL)
   include_directories(${OPENAL_INCLUDE_DIR})
 endif(USE_OPENAL)
 
+find_package(SDL2 REQUIRED)
+include_directories(${SDL2_INCLUDE_DIR})
 if(IS_APPLE)
-    # look for SDL2
-    find_library(SDL2_FRAMEWORK SDL2)
-    if (NOT SDL2_FRAMEWORK)
-        message(FATAL_ERROR "SDL2 not found")
-    endif()
-    set(SDL2_INCLUDES ${SDL2_FRAMEWORK}/Headers)
-    set(SDL2_LIBRARIES ${SDL2_FRAMEWORK})
-
     # from https://github.com/scp-fs2open/fs2open.github.com/blob/master/cmake/platform-darwin.cmake
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9")
     # required to get SDL2.framework to work
     SET(CMAKE_SKIP_RPATH FALSE)
     SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
     SET(CMAKE_INSTALL_RPATH @loader_path/../Frameworks/)
-elseif(UNIX)
-    INCLUDE(FindPkgConfig)
-
-    PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
-    set(SDL2_INCLUDES ${SDL2_INCLUDE_DIRS})
-else()
-    set(SDL2_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SDL2-2_0_3/include")
-
-    IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        # 64-bit
-        set(ARCH "x64")
-    ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        # 32-bit
-        set(ARCH "x86")
-    ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
-
-    set(SDL2_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SDL2-2_0_3/lib/${ARCH}/SDL2.lib")
-    set(SDL2_DLL "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SDL2-2_0_3/lib/${ARCH}/SDL2.dll")
-endif()
-
-include_directories(${SDL2_INCLUDES})
-set(HAS_SDL true)
-
-if(IS_APPLE)
-  option(USING_SDL2_FRAMEWORK "Check this if building with an SDL2 framework." ON)
 endif()
 
 # Make PLATFORM_USES_REGISTRY true only on windows, so that wxLauncher
@@ -366,8 +355,14 @@ add_executable(wxlauncher WIN32 MACOSX_BUNDLE
   ${RESOURCE_FILES}
   ${CODE_FILES}
   )
+# C++11 is required for wxWidgets 3.0 and wxLauncher's new code
+# (the auto_type specifically)
 if (COMMAND target_compile_features)
-  target_compile_features(wxlauncher PRIVATE cxx_auto_type) # Enable C++11 because it is required for wxWidgets 3.0
+	# target_compile_features added in CMake 3.1
+	target_compile_features(wxlauncher PRIVATE cxx_auto_type)
+else()
+	set_property(TARGET wxlauncher APPEND_STRING
+		PROPERTY COMPILE_FLAGS "-std=c++11")
 endif()
   
 set_target_properties(wxlauncher
@@ -391,7 +386,7 @@ foreach(temp_file ${helpmaker_temp_files})
   set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${temp_file})
 endforeach(temp_file)
 
-target_link_libraries(wxlauncher ${wxWidgets_LIBRARIES} ${SDL2_LIBRARIES})
+target_link_libraries(wxlauncher ${wxWidgets_LIBRARIES} ${SDL2_LIBRARY})
 
 # adapted from http://www.cmake.org/Wiki/CMake_FAQ#How_can_I_apply_resources_on_Mac_OS_X_automatically.3F
 # copies necessary resources (and frameworks, if needed) to .app bundle

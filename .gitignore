@@ -1,5 +1,6 @@
 build/*/
 builds
+3rdparty
 personal
 code/version.cpp
 */generated/*

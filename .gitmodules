@@ -1,0 +1,6 @@
+[submodule "3rdparty"]
+	path = vendor
+	url = https://github.com/wxLauncher/wxlauncher-3rdparty.git
+[submodule "cmake/modules/sdl2-cmake-scripts"]
+	path = cmake/modules/sdl2-cmake-scripts
+	url = https://github.com/IssMneur/sdl2-cmake-scripts.git

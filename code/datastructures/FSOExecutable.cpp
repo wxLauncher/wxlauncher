@@ -157,22 +157,30 @@ wxArrayString FSOExecutable::GetBinariesFromRootFolder(
 #endif
 
 	for (; cont; cont = folder.GetNext(&filename)) {
+		wxLogInfo(wxT("Found file: %s"), filename.c_str());
 		wxString lowerFilename(filename.Lower());
+		wxLogDebug(wxT("  '%s'"), lowerFilename.c_str());
 
 		// filter out "launcher" binaries (particularly on OSX)
 		// otherwise they endup in the binary list
 		if (lowerFilename.Contains(_T("launcher"))) {
+			wxLogDebug(wxT("  contains 'launcher'."));
 			continue;
 		}
 		if (!lowerFilename.StartsWith(startPattern)) {
+			wxLogDebug(wxT("  does not start with '%s'."),
+				startPattern.c_str());
 			continue;
 		}
 #if IS_LINUX
 		if (IsFileToIgnore(lowerFilename)) {
+			wxLogDebug(wxT("  ignored."));
 			continue;
 		}
 #endif
 		if (!lowerFilename.EndsWith(endPattern)) {
+			wxLogDebug(wxT("  does not end with '%s'."),
+				endPattern.c_str());
 			continue;
 		}
 		files.Add(filename);

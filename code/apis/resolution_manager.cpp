@@ -18,12 +18,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "generated/configure_launcher.h"
 
+#include "SDL.h"
+
 #include "apis/resolution_manager.hpp"
 #include "global/ProfileKeys.h"
-
-#if HAS_SDL
-#include "SDL.h"
-#endif
 
 /** \namespace ResolutionMan
 The ResolutionMan namespace contains the code that gets the
@@ -213,7 +211,6 @@ void EnumerateGraphicsModes_win32(
 }
 #endif
 
-#if HAS_SDL
 void EnumerateGraphicsModes_sdl(
 	ResolutionArray &out_modes,
 	const int minHorizontalRes,
@@ -255,12 +252,7 @@ void EnumerateGraphicsModes_sdl(
 #if IS_APPLE || IS_WIN32
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 #endif
-#endif
 }
-
-#if !HAS_SDL && !defined(WIN32)
-#error No implementation of EnumerateGraphicsModes available
-#endif
 
 /** Get available graphics modes for API and return them sorted */
 void ResolutionMan::EnumerateGraphicsModes(
